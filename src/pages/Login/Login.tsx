@@ -1,20 +1,25 @@
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useForm } from 'react-hook-form'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Schema, schema } from '../../utils/rules'
 // import { Omit } from 'lodash'
 import { useMutation } from '@tanstack/react-query'
 import { login } from '../../api/auth.api'
 import { isAxiosUnprocessableEntityError } from '../../utils/utils'
-import { ResponseApi } from '../../types/utils.type'
+import { ErrorResponse } from '../../types/utils.type'
 import Input from '../../components/Input'
 import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css';
+import { useContext } from 'react'
+import { AppContext } from '../../contexts/app.context'
+import Button from '../../components/Button'
 
 type FormDataLogin = Omit<Schema, 'confirm_password'>
 const loginSchema = schema.omit(['confirm_password'])
 
 const Login = () => {
+  const { setIsAuthenticated, setProfile } = useContext(AppContext)
+  const navigate = useNavigate()
   const {
     register,
     handleSubmit,
@@ -31,13 +36,15 @@ const Login = () => {
   const onSubmit = handleSubmit(data => {
     loginMutation.mutate(data, {
       onSuccess: (data) => {
-        console.log(data)
+        setIsAuthenticated(true)
+        navigate('/')
+        setProfile(data.data.data?.user!)
         const message = data.data?.message
         toast.success(message)
       },
 
       onError: (error) => {
-        if (isAxiosUnprocessableEntityError<ResponseApi<FormDataLogin>>(error)) {
+        if (isAxiosUnprocessableEntityError<ErrorResponse<FormDataLogin>>(error)) {
           const formError = error.response?.data.data
           if (formError?.email) {
             setError('email', {
@@ -81,9 +88,14 @@ const Login = () => {
                 autoComplete='on'
               />
               <div className='mt-3'>
-                <button type='submit' className="w-full text-center py-4 px-2 uppercase bg-red-500 text-white text-sm hover:bg-red-600">
+                <Button
+                  type='submit'
+                  className="flex justify-center items-center w-full text-center py-4 px-2 uppercase bg-red-500 text-white text-sm hover:bg-red-600"
+                  isLoading={loginMutation.isPending}
+                  disabled={loginMutation.isPending}
+                >
                   Đăng Nhập
-                </button>
+                </Button>
               </div>
               <div className="mt-8 flex items-center justify-center">
                 <span className='text-gray-300'>

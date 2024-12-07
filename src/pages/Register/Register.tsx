@@ -1,5 +1,5 @@
 import { useForm } from 'react-hook-form'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { schema } from '../../utils/rules'
 import Input from '../../components/Input'
 import { yupResolver } from '@hookform/resolvers/yup'
@@ -7,8 +7,11 @@ import { useMutation } from '@tanstack/react-query'
 import { registerAccount } from '../../api/auth.api'
 import { Omit, omit } from 'lodash'
 import { isAxiosUnprocessableEntityError } from '../../utils/utils'
-import { ResponseApi } from '../../types/utils.type'
+import { ErrorResponse } from '../../types/utils.type'
 import { toast } from 'react-toastify'
+import { useContext } from 'react'
+import { AppContext } from '../../contexts/app.context'
+import Button from '../../components/Button'
 
 export interface FormData {
   email: string,
@@ -17,6 +20,8 @@ export interface FormData {
 }
 
 const Register = () => {
+  const { setIsAuthenticated, setProfile } = useContext(AppContext)
+  const navigate = useNavigate()
   const {
     register,
     handleSubmit,
@@ -34,13 +39,15 @@ const Register = () => {
     const body = omit(data, ['confirm_password'])
     registerAccountMutation.mutate(body, {
       onSuccess: (data) => {
-        console.log(data)
+        setIsAuthenticated(true)
+        setProfile(data.data.data?.user!)
+        navigate('/')
         const message = data.data?.message
         toast.success(message)
       },
 
       onError: (error) => {
-        if (isAxiosUnprocessableEntityError<ResponseApi<Omit<FormData, 'confirm_password'>>>(error)) {
+        if (isAxiosUnprocessableEntityError<ErrorResponse<Omit<FormData, 'confirm_password'>>>(error)) {
           const formError = error.response?.data.data
           if (formError?.email) {
             setError('email', {
@@ -94,9 +101,14 @@ const Register = () => {
                 autoComplete='on'
               />
               <div className='mt-2'>
-                <button type='submit' className="w-full text-center py-4 px-2 uppercase bg-red-500 text-white text-sm hover:bg-red-600">
+                <Button
+                  type='submit'
+                  className="flex justify-center items-center w-full text-center py-4 px-2 uppercase bg-red-500 text-white text-sm hover:bg-red-600"
+                  isLoading={registerAccountMutation.isPending}
+                  disabled={registerAccountMutation.isPending}
+                >
                   Đăng ký
-                </button>
+                </Button>
               </div>
               <div className="mt-8 flex items-center justify-center">
                 <span className='text-gray-300'>
@@ -107,8 +119,8 @@ const Register = () => {
             </form>
           </div>
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   )
 }
 
